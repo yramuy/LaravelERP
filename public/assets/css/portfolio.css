@@ -1,0 +1,13 @@
+/* Styles for devices with a width of at least 1024px (common laptop size) */
+@media only screen and (min-width: 1024px) {
+    #skillDiv {
+        margin-left: 10em;
+    }
+}
+
+/* Styles for devices with a width of at least 1440px (common monitor size) */
+@media only screen and (min-width: 1440px) {
+    #skillDiv {
+        margin-left: 16em;
+    }
+}

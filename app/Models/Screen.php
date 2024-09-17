@@ -9,14 +9,14 @@ class Screen extends Model
 {
     protected $table = 'screen';
 
-    public function rolePermissions()
+    public function userRoleScreen()
     {
-        return $this->hasMany(RolePermissions::class, 'screen_id');
+        return $this->hasMany(UserRoleScreen::class, 'screen_id');
     }
 
     public function menuItem()
     {
-        return $this->hasOne(MenuItems::class, 'screen_id');
+        return $this->hasOne(MenuItem::class, 'screen_id');
     }
 
     protected $fillable = [

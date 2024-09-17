@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApiController;
+use App\Http\Controllers\MenuController;
 use App\Http\Controllers\SideNavController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -42,4 +43,6 @@ Route::get('menuitems', [ApiController::class, 'menuItems'])->name('menuitems');
 Route::post('create-update-menu-item', [ApiController::class, 'createUpdateMenuItem']);
 Route::get('menuItems/{id}/edit', [ApiController::class, 'editMenuItem']);
 Route::delete('menuItems/{id}/delete', [ApiController::class, 'deleteMenuItem']);
+
+Route::post('menu', [MenuController::class, 'menuList'])->name('menu');
 

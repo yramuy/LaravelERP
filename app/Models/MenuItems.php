@@ -10,7 +10,7 @@ class MenuItems extends Model
     use HasFactory;
 
     protected $fillable = [
-        "menu_name",
+        "menu_title",
         "screen_id",
         "url",
         "is_active",

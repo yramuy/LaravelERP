@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ApiController;
+use App\Http\Controllers\EmployeeController;
 use App\Http\Controllers\MenuController;
 use App\Http\Controllers\SideNavController;
 use Illuminate\Http\Request;
@@ -39,10 +40,14 @@ Route::get('permissions/{id}/edit', [ApiController::class, 'editPermission']);
 Route::delete('permissions/{id}/delete', [ApiController::class, 'deletePermission']);
 
 // Menu Items
-Route::get('menuitems', [ApiController::class, 'menuItems'])->name('menuitems');
+Route::post('menuitems', [ApiController::class, 'menuItems'])->name('menuitems');
 Route::post('create-update-menu-item', [ApiController::class, 'createUpdateMenuItem']);
 Route::get('menuItems/{id}/edit', [ApiController::class, 'editMenuItem']);
 Route::delete('menuItems/{id}/delete', [ApiController::class, 'deleteMenuItem']);
-
 Route::post('menu', [MenuController::class, 'menuList'])->name('menu');
 
+// Employee
+Route::get('employees', [EmployeeController::class, 'allEmployees'])->name('employees');
+Route::post('create-update-employee', [EmployeeController::class, 'saveUpdateEmployee'])->name('create-update-employee');
+Route::get('employees/{empID}/edit', [EmployeeController::class, 'employeeDataByEmpID']);
+Route::get('employees/{empID}/delete', [EmployeeController::class, 'employeeDelete']);

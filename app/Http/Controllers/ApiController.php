@@ -10,6 +10,7 @@ use Illuminate\Http\Request;
 use App\Models\RolePermissions;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\LoginRequest;
+use App\Models\MenuItem;
 use Illuminate\Support\Facades\Auth;
 
 class ApiController extends Controller
@@ -149,19 +150,19 @@ class ApiController extends Controller
         $query = Screen::select(
             'screen.id',
             'screen.screen_name',
-            'menu_items.menu_name',
+            'menu_items.menu_title',
             'menu_items.url',
             'menu_items.parent_id',
             'menu_items.level',
             'menu_items.id as miID',
-            'role_permissions.can_read',
-            'role_permissions.can_create',
-            'role_permissions.can_update',
-            'role_permissions.can_delete'
+            'user_role_screen.can_read',
+            'user_role_screen.can_create',
+            'user_role_screen.can_update',
+            'user_role_screen.can_delete'
         )
-            ->leftJoin('role_permissions', 'screen.id', '=', 'role_permissions.screen_id')
+            ->leftJoin('user_role_screen', 'screen.id', '=', 'user_role_screen.screen_id')
             ->leftJoin('menu_items', 'menu_items.screen_id', '=', 'screen.id')
-            ->where('role_permissions.role_id', $roleId)
+            ->where('user_role_screen.user_role_id', $roleId)
             ->where('menu_items.parent_id', $parentId)
             ->where('menu_items.is_active', 1)
             ->get();
@@ -174,7 +175,7 @@ class ApiController extends Controller
         $output = array(
             'id' => $result->id,
             'screen_name' => $result->screen_name,
-            'menu_name' => $result->menu_name,
+            'menu_name' => $result->menu_title,
             'parent_id' => $result->parent_id,
             'level' => $result->level,
             'miID' => $result->miID,
@@ -258,10 +259,10 @@ class ApiController extends Controller
     function screenPermissionData()
     {
 
-        $query = DB::table('role_permissions as rp')
+        $query = DB::table('user_role_screen as rp')
             ->select(
                 'rp.id',
-                'rp.role_id',
+                'rp.user_role_id',
                 'rp.screen_id',
                 'r.role_name',
                 's.screen_name',
@@ -270,7 +271,7 @@ class ApiController extends Controller
                 DB::raw("IF(rp.can_update = 1, 'TRUE', 'FALSE') AS canUpdate"),
                 DB::raw("IF(rp.can_delete = 1, 'TRUE', 'FALSE') AS canDelete")
             )
-            ->leftJoin('roles as r', 'r.id', '=', 'rp.role_id')
+            ->leftJoin('roles as r', 'r.id', '=', 'rp.user_role_id')
             ->leftJoin('screen as s', 's.id', '=', 'rp.screen_id')
             ->orderBy('id', 'DESC')
             ->get();
@@ -280,7 +281,7 @@ class ApiController extends Controller
 
         foreach ($query as $key => $value) {
             $output['id'] = $value->id;
-            $output['role_id'] = $value->role_id;
+            $output['role_id'] = $value->user_role_id;
             $output['screen_id'] = $value->screen_id;
             $output['role_name'] = $value->role_name;
             $output['screen_name'] = $value->screen_name;
@@ -301,7 +302,7 @@ class ApiController extends Controller
         // Data to be inserted or updated
         $data = [
             'id' => $request->permissionID,
-            'role_id' => $request->roleId,
+            'user_role_id' => $request->roleId,
             'screen_id' => $request->screenId,
             'can_read' => $request->canRead,
             'can_create' => $request->canCreate,
@@ -315,54 +316,64 @@ class ApiController extends Controller
         ];
 
         // Perform the update or insert
-        DB::table('role_permissions')->updateOrInsert($condition, $data);
+        DB::table('user_role_screen')->updateOrInsert($condition, $data);
 
-        $message = $request->permissionID ? "Screen Permission updated successfully." : "Screen Permission added successfully.";
+        $message = $request->permissionID ? "User Role Screen updated successfully." : "User Role Screen added successfully.";
 
         return response()->json(['status' => 200, 'message' => $message]);
     }
 
     function editPermission($id)
     {
-        $permission = DB::table('role_permissions')->where('id', $id)->first();
+        $permission = DB::table('user_role_screen')->where('id', $id)->first();
 
         return response()->json(['status' => 200, 'permission' => $permission]);
     }
 
     function deletePermission($id)
     {
-        DB::table('role_permissions')->where('id', $id)->delete();
-        return response()->json(['status' => 200, 'message' => "Permission deleted successfully."]);
+        DB::table('user_role_screen')->where('id', $id)->delete();
+        return response()->json(['status' => 200, 'message' => "User Role Screen deleted successfully."]);
     }
 
-    function menuItems()
+    function menuItems(Request $request)
     {
+
+        $item = $request->item;
+
         $query = DB::table('menu_items as mi')
             ->select(
                 'mi.id',
-                'mi.menu_name',
+                'mi.menu_title',
                 'mi.screen_id',
                 'mi.url',
                 'mi.parent_id',
+                'mi.icon',
                 's.screen_name',
             )
-            ->leftJoin('screen as s', 's.id', '=', 'mi.screen_id')
-            ->orderBy('mi.id', 'DESC')
-            ->get();
+            ->leftJoin('screen as s', 's.id', '=', 'mi.screen_id');
+
+        if (!empty($item)) {
+            $query->where('mi.menu_title', 'LIKE', '%' . $item . '%');
+        }
+
+        $query->orderBy('mi.id', 'DESC');
+        $result = $query->get();
 
 
         $menuItems = array();
 
         // Pre-fetch parent menu names
-        $parentIds = $query->pluck('parent_id')->unique()->filter()->values();
-        $parents = MenuItems::whereIn('id', $parentIds)->pluck('menu_name', 'id')->toArray();
+        $parentIds = $result->pluck('parent_id')->unique()->filter()->values();
+        $parents = MenuItem::whereIn('id', $parentIds)->pluck('menu_title', 'id')->toArray();
 
-        foreach ($query as $key => $value) {
+        foreach ($result as $key => $value) {
             $output['id'] = $value->id;
-            $output['menu_name'] = $value->menu_name;
+            $output['menu_name'] = $value->menu_title;
             $output['screen_id'] = $value->screen_id;
             $output['url'] = $value->url;
             $output['screen_name'] = $value->screen_name;
+            $output['icon'] = $value->icon;
             $output['parent'] = $parents[$value->parent_id] ?? null;
             $menuItems[] = $output;
         }
@@ -377,12 +388,13 @@ class ApiController extends Controller
         // Data to be inserted or updated
         $data = [
             'id' => $request->menuItemID,
-            'parent_id' => $request->parentID,
-            'menu_name' => $request->menuName,
+            'parent_id' => $request->parentID ? $request->parentID : 0,
+            'menu_title' => $request->menuName,
             'screen_id' => $request->screenID,
             'url' => $request->url,
             'level' => $request->level,
-            'is_active' => $request->isActive
+            'icon' => $request->icon,
+            'status' => $request->isActive
         ];
 
         // Define the conditions to check for an existing record
@@ -410,5 +422,4 @@ class ApiController extends Controller
         DB::table('menu_items')->where('id', $id)->delete();
         return response()->json(['status' => 200, 'message' => "MenuItem deleted successfully."]);
     }
-
 }

@@ -43,22 +43,22 @@ class MenuController extends Controller
         $query = Screen::select(
             'screen.id',
             'screen.screen_name',
-            'menu_item.menu_title',
-            'menu_item.url',
-            'menu_item.icon',
-            'menu_item.parent_id',
-            'menu_item.level',
-            'menu_item.id as miID',
+            'menu_items.menu_title',
+            'menu_items.url',
+            'menu_items.icon',
+            'menu_items.parent_id',
+            'menu_items.level',
+            'menu_items.id as miID',
             'user_role_screen.can_read',
             'user_role_screen.can_create',
             'user_role_screen.can_update',
             'user_role_screen.can_delete'
         )
             ->leftJoin('user_role_screen', 'screen.id', '=', 'user_role_screen.screen_id')
-            ->leftJoin('menu_item', 'menu_item.screen_id', '=', 'screen.id')
+            ->leftJoin('menu_items', 'menu_items.screen_id', '=', 'screen.id')
             ->where('user_role_screen.user_role_id', $roleId)
-            ->where('menu_item.parent_id', $parentId)
-            ->where('menu_item.status', 1)
+            ->where('menu_items.parent_id', $parentId)
+            ->where('menu_items.status', 1)
             ->get();
 
         return $query;

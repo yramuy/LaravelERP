@@ -14,9 +14,7 @@ class MenuItem extends Model
         "screen_id",
         "parent_id",
         "level",
-        "url_extras",
+        "url",
         "status"
-
-
     ];
 }

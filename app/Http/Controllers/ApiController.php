@@ -11,7 +11,10 @@ use App\Models\RolePermissions;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\LoginRequest;
 use App\Models\MenuItem;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ApiController extends Controller
 {
@@ -28,16 +31,48 @@ class ApiController extends Controller
         return response()->json($response);
     }
 
+    // Register a new user
+    public function register(Request $request)
+    {
+
+        $this->validate($request, [
+            'name' => 'required|string|max:255',
+            'email' => 'required|string|email|max:255',
+            'password' => 'required|string|min:6',
+        ]);
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $request->email,
+            'username' => $request->name,
+            'password' => Hash::make($request->password),
+        ]);
+
+        $token = JWTAuth::fromUser($user);
+
+        return response()->json(['token' => $token], 201);
+    }
+
     public function login(LoginRequest $request)
     {
-        $input = $request->validated();
-        $credentials = $request->only('password');
-        // Check if the input contains an email
-        if (filter_var($request->input('username'), FILTER_VALIDATE_EMAIL)) {
-            $credentials['email'] = $request->input('username');
-        } else {
-            $credentials['username'] = $request->input('username');
+        // Validate the request
+        $credentials = $request->only('username', 'password');
+
+        // Attempt to generate token using credentials
+        if (!$token = JWTAuth::attempt($credentials)) {
+            return response()->json(['error' => 'Invalid credentials'], 401);
         }
+
+        // Return the token if login is successful
+        // return response()->json(compact('token'));
+        // $input = $request->validated();
+        // $credentials = $request->only('password');
+        // // Check if the input contains an email
+        // if (filter_var($request->input('username'), FILTER_VALIDATE_EMAIL)) {
+        //     $credentials['email'] = $request->input('username');
+        // } else {
+        //     $credentials['username'] = $request->input('username');
+        // }
 
         if (Auth::guard('admin')->attempt($credentials)) {
 
@@ -58,11 +93,80 @@ class ApiController extends Controller
                 'role_name' => $roleName
             );
 
-            return response()->json(array('status' => 200, 'message' => 'Logged in successfully', 'userDetails' => $userData));
+            return response()->json(array('status' => 200, 'message' => 'Logged in successfully', 'userDetails' => $userData, "token" => $token));
         } else {
             return response()->json(array('status' => 404, 'message' => 'Incorrect Username or Password', 'userDetails' => []));
         }
     }
+
+    // Get authenticated user
+    public function getUser()
+    {
+        $user = Auth::user();
+        return response()->json($user);
+    }
+
+    public function getAllUsers()
+    {
+        try {
+            $users = DB::table('users as u')
+                ->select('u.id', 'u.username', 'u.email', 'u.role as roleID', 'r.role_name as roleName')
+                ->leftJoin('roles as r', 'r.id', '=', 'u.role')
+                ->get();
+            return response()->json((["statusCode" => 200, "message" => "Fetched all Users", "users" => $users]));
+        } catch (\Throwable $th) {
+            return response()->json(array("statusCode" => 500, "message" => $th, "users" => []));
+        }
+    }
+
+    public function saveUpdateUser(Request $request)
+    {
+        try {
+            //code...
+            $data = [
+                "name" => $request->userName,
+                "email" => $request->userName . '@gmail.com',
+                "username" => $request->userName,
+                "role" => $request->role,
+                "emp_number" => $request->empNumber,
+                "password" => Hash::make($request->password),
+                "status" => $request->status
+            ];
+
+            // Define the conditions to check for an existing record
+            $condition = [
+                "id" => $request->userID
+            ];
+
+            // Perform the update or insert
+            DB::table('users')->updateOrInsert($condition, $data);
+
+            $message = $request->userID ? "User updated successfully" : "User added successfully";
+            return response()->json(array('status' => 200, 'message' => $message));
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json(array('status' => 500, 'message' => $th));
+        }
+    }
+
+    public function userDataByID($id)
+    {
+        $user = DB::table('users as u')
+            ->select('u.*', 'e.emp_number', 'e.first_name', 'e.last_name')
+            ->leftJoin('employees as e', 'u.emp_number', '=', 'e.emp_number')
+            ->where('u.id', $id)
+            ->first();
+
+        return response()->json(['status' => 200, 'user' => $user]);
+    }
+
+    public function deleteUser($id)
+    {
+        DB::table('users')->where('id', $id)->delete();
+
+        return response()->json(['status' => 200, 'message' => 'Deleted successfully']);
+    }
+
 
     // public function menuData(Request $request)
     // {

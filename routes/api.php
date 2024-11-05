@@ -25,6 +25,9 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('profileData', [ApiController::class, 'ProfileData'])->name('profileData');
 Route::post('login', [ApiController::class, 'login'])->name('login');
 Route::post('menus', [ApiController::class, 'menuData'])->name('menus');
+Route::post('register', [ApiController::class, 'register'])->name('register');
+
+
 
 // Screen Routes
 Route::get('screens', [ApiController::class, 'screenData'])->name('screens');
@@ -51,3 +54,14 @@ Route::get('employees', [EmployeeController::class, 'allEmployees'])->name('empl
 Route::post('create-update-employee', [EmployeeController::class, 'saveUpdateEmployee'])->name('create-update-employee');
 Route::get('employees/{empID}/edit', [EmployeeController::class, 'employeeDataByEmpID']);
 Route::get('employees/{empID}/delete', [EmployeeController::class, 'employeeDelete']);
+
+// User Protected route
+Route::group(['middleware' => ['jwt.auth']], function () {
+    Route::get('/user', [ApiController::class, 'getUser']);
+    Route::get('/users', [ApiController::class, 'getAllUsers']);
+
+});
+
+Route::post('/create-update-user', [ApiController::class, 'saveUpdateUser'])->name('create-update-user');
+Route::get('user/{userID}/edit', [ApiController::class, 'userDataByID']);
+Route::get('user/{userID}/delete', [ApiController::class, 'deleteUser']);

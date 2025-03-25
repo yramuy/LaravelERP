@@ -61,7 +61,13 @@ Route::group(['middleware' => ['jwt.auth']], function () {
     Route::get('/users', [ApiController::class, 'getAllUsers']);
 
 });
-
 Route::post('/create-update-user', [ApiController::class, 'saveUpdateUser'])->name('create-update-user');
 Route::get('user/{userID}/edit', [ApiController::class, 'userDataByID']);
 Route::get('user/{userID}/delete', [ApiController::class, 'deleteUser']);
+
+// MyInfo
+Route::post('/report-employees', [EmployeeController::class, 'employeesByID'])->name('/report-employees');
+Route::post('/save-update-reportto', [EmployeeController::class, 'saveUpdateReportTo'])->name('/save-update-reportto');
+Route::post('/reporting-employees', [EmployeeController::class, 'reportingEmployeesByEmpID'])->name('/reporting-employees');
+Route::delete('reportingTo/{reportID}/delete', [EmployeeController::class, 'reportingEmpDelete']);
+

@@ -15,9 +15,16 @@ use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Tymon\JWTAuth\Facades\JWTAuth;
+use App\Http\Controllers\EmployeeController;
 
 class ApiController extends Controller
 {
+    protected $employeeController;
+
+    public function __construct(EmployeeController $employeeController)
+    {
+        $this->employeeController = $employeeController;
+    }
     public function ProfileData()
     {
         $profile = About::first();
@@ -85,12 +92,28 @@ class ApiController extends Controller
                 $roleName = 'Administrative';
             }
 
+            // if ($user->role != 1) {
+                $empData = $this->employeeController->employeeDataByEmpID($user->emp_number);
+                // Assuming $response is your JsonResponse object
+                $data = $empData->getData();
+                // Access the employee data
+                $employee = $data->employee;
+                $userPic =  $data->path .'/'.$employee->profile_pic;
+                $empName = $employee->first_name.' '.$employee->last_name;
+            // } else {
+            //     $userPic =  "";
+            //     $empName = "ADMIN";
+            // }
+
             $userData = array(
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
                 'role_id' => $user->role,
-                'role_name' => $roleName
+                'role_name' => $roleName,
+                'emp_number' => $user->emp_number,
+                'profile_pic' => $userPic,
+                'emp_fullName' => $empName
             );
 
             return response()->json(array('status' => 200, 'message' => 'Logged in successfully', 'userDetails' => $userData, "token" => $token));
@@ -405,7 +428,7 @@ class ApiController extends Controller
 
         // Data to be inserted or updated
         $data = [
-            'id' => $request->permissionID,
+            // 'id' => $request->permissionID,
             'user_role_id' => $request->roleId,
             'screen_id' => $request->screenId,
             'can_read' => $request->canRead,
@@ -414,15 +437,22 @@ class ApiController extends Controller
             'can_delete' => $request->canDelete
         ];
 
+        if ($request->btnValue == "copy") {
+            DB::table('user_role_screen')->insert($data);
+            $message = "Data copied successfully";
+        } else {
+            $condition = [
+                'id' => $request->permissionID
+            ];
+
+            // Perform the update or insert
+            DB::table('user_role_screen')->updateOrInsert($condition, $data);
+
+            $message = $request->permissionID ? "User Role Screen updated successfully." : "User Role Screen added successfully.";
+        }
+
         // Define the conditions to check for an existing record
-        $condition = [
-            'id' => $request->permissionID
-        ];
 
-        // Perform the update or insert
-        DB::table('user_role_screen')->updateOrInsert($condition, $data);
-
-        $message = $request->permissionID ? "User Role Screen updated successfully." : "User Role Screen added successfully.";
 
         return response()->json(['status' => 200, 'message' => $message]);
     }

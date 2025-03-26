@@ -383,6 +383,7 @@ class ApiController extends Controller
 
         return response()->json(['status' => 200, 'roles' => $roles]);
     }
+
     function screenPermissionData()
     {
 
@@ -555,5 +556,20 @@ class ApiController extends Controller
     {
         DB::table('menu_items')->where('id', $id)->delete();
         return response()->json(['status' => 200, 'message' => "MenuItem deleted successfully."]);
+    }
+
+    function leaveTypes()
+    {
+        $query = DB::table('leave_types')->select('id', 'name')->where('is_active', 1)->get();
+
+        $leaveTypes = array();
+
+        foreach ($query as $key => $value) {
+            $output['id'] = $value->id;
+            $output['name'] = $value->name;
+            $leaveTypes[] = $output;
+        }
+
+        return response()->json(['status' => 200, 'leaveTypes' => $leaveTypes]);
     }
 }

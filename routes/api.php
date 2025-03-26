@@ -71,3 +71,6 @@ Route::post('/save-update-reportto', [EmployeeController::class, 'saveUpdateRepo
 Route::post('/reporting-employees', [EmployeeController::class, 'reportingEmployeesByEmpID'])->name('/reporting-employees');
 Route::delete('reportingTo/{reportID}/delete', [EmployeeController::class, 'reportingEmpDelete']);
 
+// Leave
+Route::get('/leave-types', [ApiController::class, 'leaveTypes'])->name('/leave-types');
+

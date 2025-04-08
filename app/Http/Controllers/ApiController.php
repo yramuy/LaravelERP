@@ -93,13 +93,13 @@ class ApiController extends Controller
             }
 
             // if ($user->role != 1) {
-                $empData = $this->employeeController->employeeDataByEmpID($user->emp_number);
-                // Assuming $response is your JsonResponse object
-                $data = $empData->getData();
-                // Access the employee data
-                $employee = $data->employee;
-                $userPic =  $data->path .'/'.$employee->profile_pic;
-                $empName = $employee->first_name.' '.$employee->last_name;
+            $empData = $this->employeeController->employeeDataByEmpID($user->emp_number);
+            // Assuming $response is your JsonResponse object
+            $data = $empData->getData();
+            // Access the employee data
+            $employee = $data->employee;
+            $userPic =  $data->path . '/' . $employee->profile_pic;
+            $empName = $employee->first_name . ' ' . $employee->last_name;
             // } else {
             //     $userPic =  "";
             //     $empName = "ADMIN";
@@ -571,5 +571,146 @@ class ApiController extends Controller
         }
 
         return response()->json(['status' => 200, 'leaveTypes' => $leaveTypes]);
+    }
+
+    function applyLeave(Request $request)
+    {
+        // Data to be inserted or updated
+        $lengthHours = 0;
+        if ($request->duration_type == 1) {
+            $lengthHours = $request->length_days * 9;
+        } else {
+            $lengthHours = $request->length_days * 4.5;
+        }
+
+        $data = [
+            'id' => $request->leaveId,
+            'leave_type' => $request->leaveType,
+            'length_hours' => $lengthHours,
+            'length_days' => $request->length_days,
+            'from_date' => $request->from_date,
+            'to_date' => $request->to_date,
+            'duration_type' => $request->duration_type,
+            'session_type' => $request->session_type,
+            'comment' => $request->comment,
+            'emp_number' => $request->emp_number,
+            'leave_status' => 1,
+        ];
+
+        // If no record was updated, perform an insert and get the ID
+        // if (!$updatedOrInserted) {
+        $lastInsertId = DB::table('leaves')->insertGetId($data);
+        // } else {
+        //     $lastInsertId = $request->leaveId; // Return the existing ID if updated
+        // }
+
+        // Define the conditions to check for an existing record
+        // $condition = [
+        //     'id' => $request->leaveId
+        // ];
+
+        $logData = [
+            "leave_id" => $lastInsertId,
+            "status" => 1,
+            "comment" => $request->comment,
+            "created_by" => $request->emp_number
+        ];
+
+        DB::table('leave_action_log')->insert($logData);
+
+        // Use updateOrInsert
+        // $updatedOrInserted = DB::table('leaves')->updateOrInsert($condition, $data);
+
+        $leaveBalanceQuery = $this->getLeaveBalance($request->emp_number, $request->leaveType);
+        // Define the conditions to check for an existing record
+        $updateEntitle = [
+            'used_leaves' => $leaveBalanceQuery->used_leaves + $request->length_days
+        ];
+
+        $entitleCondition = [
+            'id' => $leaveBalanceQuery->id
+        ];
+
+        // Perform the update or insert
+        DB::table('leave_entitlements')->updateOrInsert($entitleCondition, $updateEntitle);
+
+
+        $message = "Applied Leave successfully.";
+
+        return response()->json(['status' => 200, 'message' => $message]);
+    }
+
+    function myLeaves(Request $request)
+    {
+        $empNumber = $request->empNumber;
+        $query = DB::table('leaves')->select('*')->where('emp_number', $empNumber)->orderBy('id', 'desc')->get()->toArray();
+        $queryArray = json_decode(json_encode($query), true);
+
+        $leaves = array();
+        $statuses = [
+            '1' => 'Scheduled',
+            '2' => 'Approved',
+            '3' => 'Rejected',
+            '4' => 'Canceled',
+        ];
+
+        foreach ($queryArray as $key => $value) {
+
+            $leaveBalance = 0;
+
+            $leaveBalanceQuery = $this->getLeaveBalance($value['emp_number'], $value['leave_type']);
+
+            if ($query) {
+                $leaveBalance = $leaveBalanceQuery->no_of_leaves - $leaveBalanceQuery->used_leaves;
+            }
+
+            $output['id'] = $value['id'];
+            $output['created_at'] = date('Y-m-d', strtotime($value['created_at']));
+            $output['from_date'] = $value['from_date'];
+            $output['to_date'] = $value['to_date'];
+            $output['emp_name'] = $this->getEmployeeName($value['emp_number']);
+            $output['leave_balance'] = $leaveBalance;
+            $output['leave_type'] = $this->getLeaveType($value['leave_type']);
+            $output['length_days'] = $value['length_days'];
+            $output['leave_status'] = $statuses[$value['leave_status']] ?? 'Unknown';
+            $leaves[] = $output;
+        }
+
+        return response()->json(['status' => 200, 'leaves' => $leaves]);
+    }
+
+    function getLeaveType($id)
+    {
+        $query = DB::table('leave_types')->select('*')->where('id', $id)->where('is_active', 1)->first();
+        $leaveType = "--";
+        if ($query) {
+            $leaveType = $query->name;
+        }
+
+        return $leaveType;
+    }
+
+    function getLeaveBalance($empNumber, $leaveType)
+    {
+        $query = DB::table('leave_entitlements')
+            ->select('*')
+            ->where('emp_number', $empNumber)
+            ->where('leave_type_id', $leaveType)
+            ->whereYear('from_date', date('Y'))
+            ->first(); // Fetches only the required column
+
+        return $query;
+    }
+
+    function getEmployeeName($empNumber)
+    {
+        $query = DB::table('employees')
+            ->select('first_name', 'last_name')
+            ->where('emp_number', $empNumber)
+            ->first();
+
+        $fullName = $query->first_name . ' ' . $query->last_name;
+
+        return $fullName;
     }
 }

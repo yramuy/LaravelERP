@@ -55,12 +55,7 @@ Route::post('create-update-employee', [EmployeeController::class, 'saveUpdateEmp
 Route::get('employees/{empID}/edit', [EmployeeController::class, 'employeeDataByEmpID']);
 Route::get('employees/{empID}/delete', [EmployeeController::class, 'employeeDelete']);
 
-// User Protected route
-Route::group(['middleware' => ['jwt.auth']], function () {
-    Route::get('/user', [ApiController::class, 'getUser']);
-    Route::get('/users', [ApiController::class, 'getAllUsers']);
 
-});
 Route::post('/create-update-user', [ApiController::class, 'saveUpdateUser'])->name('create-update-user');
 Route::get('user/{userID}/edit', [ApiController::class, 'userDataByID']);
 Route::get('user/{userID}/delete', [ApiController::class, 'deleteUser']);
@@ -73,4 +68,15 @@ Route::delete('reportingTo/{reportID}/delete', [EmployeeController::class, 'repo
 
 // Leave
 Route::get('/leave-types', [ApiController::class, 'leaveTypes'])->name('/leave-types');
+
+// User Protected route
+Route::group(['middleware' => ['jwt.auth']], function () {
+
+    Route::get('/user', [ApiController::class, 'getUser']);
+    Route::get('/users', [ApiController::class, 'getAllUsers']);
+
+    Route::post('/apply-leave', [ApiController::class, 'applyLeave']);
+    Route::post('/my-leaves', [ApiController::class, 'myLeaves']);
+
+});
 
